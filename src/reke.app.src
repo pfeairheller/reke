@@ -1,0 +1,12 @@
+{application, reke,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { reke_app, []}},
+  {env, []}
+ ]}.
