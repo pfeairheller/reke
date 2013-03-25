@@ -8,5 +8,17 @@
                   stdlib
                  ]},
   {mod, { reke_app, []}},
-  {env, []}
- ]}.
+{env, [
+        {pools, [
+            {pool1, [
+                {size, 10},
+                {max_overflow, 20}
+            ], [
+                {hostname, "127.0.0.1"},
+                {database, "notify_development"},
+                {username, "scoreboard"},
+                {password, "scoreboard"}
+            ]}
+        ]}
+    ]}
+]}.
