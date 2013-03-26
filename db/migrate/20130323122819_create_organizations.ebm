@@ -1,8 +1,4 @@
--module(create_organizations).
-
--export([version/0, up/0, down/0]).
-
-up() ->
+{up,
   {create_table, organizations,
     [
       {string, name},
@@ -11,10 +7,9 @@ up() ->
       {string, access_token},
       {timestamps}
     ]
-  }.
+  }
+}.
 
-down() ->
-  {drop_table, organizations}.
-
-version() ->
-  20130323122819.
+{down,
+  {drop_table, organizations}
+}.

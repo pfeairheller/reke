@@ -35,9 +35,10 @@ process_files([], Pid) ->
   Pid ! {finished},
   ok;
 process_files([File|Rest], Pid) ->
-  case compile:file("db/migrate/" ++ File) of
-    {ok, ModName} ->
-      Term = apply(ModName, up, []),
+  erlang:display(File),
+  case file:consult("db/migrate/" ++ File) of
+    {ok, Tokens} ->
+      Term = proplists:get_value(up, Tokens),
       Pid ! Term,
       process_files(Rest, Pid);
     _ ->
