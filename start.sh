@@ -3,4 +3,3 @@
 exec erl -pa ebin edit deps/*/ebin -boot start_sasl \
     -sname reke_dev \
     -s reke
-    -s reke_connection

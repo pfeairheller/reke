@@ -7,12 +7,20 @@
 
 
 start() ->
-  io:format("Hello Reke World!~n").
+  %% getopt parsing, call function.
+
+  Result = reke_connection:start(reke),
+  io:format("Hello Reke World! ~p ~n", [Result]).
 
 generate() ->
   receive
     {create_table, TableName, Contents} ->
-      io:format("Gonna create ~p~p~n", [TableName, Contents]),
+      Stmt = generate_create_statement(TableName, Contents),
+      erlang:display(Stmt),
+      case reke_connection:squery(reke, Stmt) of
+        Result ->
+          erlang:display(Result)
+      end,
       generate();
     {drop, TableName} ->
       io:format("Gonna delete ~p~n", [TableName]),
@@ -29,12 +37,12 @@ migrate() ->
       ok;
     _ ->
       {error, "bad dir"}
-  end .
+  end.
 
 process_files([], Pid) ->
   Pid ! {finished},
   ok;
-process_files([File|Rest], Pid) ->
+process_files([File | Rest], Pid) ->
   erlang:display(File),
   case file:consult("db/migrate/" ++ File) of
     {ok, Tokens} ->
@@ -45,6 +53,22 @@ process_files([File|Rest], Pid) ->
       {error, unknown}
   end.
 
+generate_create_statement(TableName, Contents) ->
+  "CREATE TABLE " ++ TableName ++ "(\n     id integer NOT NULL \n" ++  create_table_columns("", Contents) ++ ")".
+
+create_table_columns(Stmt, []) ->
+  Stmt;
+create_table_columns(Stmt, [Column|Columns]) ->
+  create_table_columns(Stmt ++ ",\n" ++ column_ref(Column), Columns).
+
+
+column_ref({string, Name}) ->
+  Name ++ " character varying(255)";
+column_ref({integer, Name}) ->
+  Name ++ " integer";
+column_ref({timestamps}) ->
+  "created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL".
 
 %% Sort by version
 %% For each module, where version is not already in schema_migrations, call ModName:up and pass term as message to process

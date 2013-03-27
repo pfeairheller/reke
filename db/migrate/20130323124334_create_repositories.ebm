@@ -1,13 +1,13 @@
 {up,
-  {create_table, repositories,
+  {create_table, "repositories",
     [
-      {string, name},
-      {string, url},
+      {string, "name"},
+      {string, "url"},
       {timestamps}
     ]
   }
   }.
 
 {down,
-  {drop_table, repositories}
+  {drop_table, "repositories"}
   }.
