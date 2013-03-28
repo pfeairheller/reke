@@ -7,7 +7,6 @@
 
 
 start() ->
-  %% getopt parsing, call function.
   reke_connection:start(reke).
 
 generate() ->
@@ -15,6 +14,8 @@ generate() ->
     {create_table, TableName, Contents} ->
       Stmt = generate_create_statement(TableName, Contents),
       case reke_connection:squery(reke, Stmt) of
+        {error, _Error} ->
+          ok;
         Result ->
           erlang:display(Result)
       end,
@@ -42,9 +43,10 @@ rollback() ->
 
 run_for(Dir) ->
   Pid = spawn(fun() -> reke:generate() end),
+  ensure_migration_table(Pid),
   case file:list_dir("db/migrate") of
     {ok, Files} ->
-      process_files(Files, Pid, Dir),
+      process_files(lists:sort(Files), Pid, Dir),
       ok;
     _ ->
       {error, "bad dir"}
@@ -86,6 +88,8 @@ column_ref({timestamps}) ->
   "created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL".
 
-%% Sort by version
-%% For each module, where version is not already in schema_migrations, call ModName:up and pass term as message to process
+
+ensure_migration_table(Pid) ->
+  Pid ! {create_table, "schema_migrations", [{string, "version"}]}.
+
 %% Insert all version numbers in schema_migrations
