@@ -3,55 +3,71 @@
 -author("pfeairheller").
 
 %% API
--export([start/0, migrate/0, generate/0]).
+-export([start/0, migrate/0, rollback/0, generate/0]).
 
 
 start() ->
   %% getopt parsing, call function.
-
-  Result = reke_connection:start(reke),
-  io:format("Hello Reke World! ~p ~n", [Result]).
+  reke_connection:start(reke).
 
 generate() ->
   receive
     {create_table, TableName, Contents} ->
       Stmt = generate_create_statement(TableName, Contents),
-      erlang:display(Stmt),
       case reke_connection:squery(reke, Stmt) of
         Result ->
           erlang:display(Result)
       end,
       generate();
-    {drop, TableName} ->
-      io:format("Gonna delete ~p~n", [TableName]),
+    {drop_table, TableName} ->
+      Stmt = generate_drop_statement(TableName),
+      case reke_connection:squery(reke, Stmt) of
+        Result ->
+          erlang:display(Result)
+      end,
       generate();
+    {finished, Pid} ->
+      Pid ! done,
+      ok;
     _ ->
       {error, unknown_command}
   end.
 
 migrate() ->
+  run_for(up).
+
+rollback() ->
+  run_for(down).
+
+
+run_for(Dir) ->
   Pid = spawn(fun() -> reke:generate() end),
   case file:list_dir("db/migrate") of
     {ok, Files} ->
-      process_files(Files, Pid),
+      process_files(Files, Pid, Dir),
       ok;
     _ ->
       {error, "bad dir"}
   end.
 
-process_files([], Pid) ->
-  Pid ! {finished},
-  ok;
-process_files([File | Rest], Pid) ->
+process_files([], Pid, _Dir) ->
+  Pid ! {finished, self()},
+  receive
+    done -> ok
+  end;
+process_files([File | Rest], Pid, Dir) ->
   erlang:display(File),
   case file:consult("db/migrate/" ++ File) of
     {ok, Tokens} ->
-      Term = proplists:get_value(up, Tokens),
+      Term = proplists:get_value(Dir, Tokens),
       Pid ! Term,
-      process_files(Rest, Pid);
+      process_files(Rest, Pid, Dir);
     _ ->
       {error, unknown}
   end.
+
+generate_drop_statement(TableName) ->
+  "DROP TABLE " ++ TableName.
 
 generate_create_statement(TableName, Contents) ->
   "CREATE TABLE " ++ TableName ++ "(\n     id integer NOT NULL \n" ++  create_table_columns("", Contents) ++ ")".

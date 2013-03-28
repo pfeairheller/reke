@@ -14,7 +14,6 @@ stop(_State) ->
 init(Name) ->
   {PoolArgs, WorkerArgs} = database_config(Name),
   PoolSpecs = [poolboy:child_spec(Name, PoolArgs, WorkerArgs)],
-  io:format("~p~n", [PoolSpecs]),
   {ok, {{one_for_one, 10, 10}, PoolSpecs}}.
 
 squery(PoolName, Sql) ->
@@ -26,8 +25,6 @@ equery(PoolName, Stmt, Params) ->
   poolboy:transaction(PoolName, fun(Worker) ->
     gen_server:call(Worker, {equery, Stmt, Params})
   end).
-
-
 
 
 %% Private
