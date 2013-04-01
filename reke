@@ -1,7 +1,5 @@
 #!/usr/bin/env escript
 %%!-pa ebin edit deps/poolboy/ebin deps/epgsql/ebin deps/getopt/ebin -sname reke_dev
 main(Args) ->
-    [FirstArg | RestArgs] = Args,
-    Method = list_to_atom(FirstArg),
     reke:start(),
-    apply(reke, Method, [RestArgs]).
+    reke:execute(Args).
