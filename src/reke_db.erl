@@ -11,6 +11,7 @@
 -export([init/1, handle_call/3, handle_cast/2]).
 
 start_link() ->
+  ets:new(migrations, [named_table, {}]),
   gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 stop() ->
@@ -44,15 +45,18 @@ handle_call({drop_table, TableName}, _Pid, LoopData) ->
     Result ->
       {ok, Result}
   end,
-  {reply, Reply, LoopData}.
-
-handle_cast({insert_schema_migration, FileName}, LoopData) ->
-  Stmt = generate_schema_migration_statement(FileName),
+  {reply, Reply, LoopData};
+handle_call({insert_schema_migration, Version}, _Pid, LoopData) ->
+  Stmt = io_lib:format("insert into schema_migrations (version) values ('~s')", [Version]),
   case reke_connection:squery(reke, Stmt) of
     Result ->
       erlang:display(Result)
   end,
-  {noreply, LoopData};
+  {reply, Result, LoopData};
+handle_call({should_run, Version}, _Pid, LoopData) ->
+
+  {reply, true, LoopData}.
+
 handle_cast(stop, LoopData) ->
   {stop, normal, LoopData}.
 
@@ -67,23 +71,24 @@ rollback(_Options) ->
 run_for(Dir) ->
   case file:list_dir("db/migrate") of
     {ok, Files} ->
-      process_files(lists:sort(Files), Dir),
+      process_files(lists:sort(Files), Dir, []),
       ok;
     _ ->
       {error, "bad dir"}
   end.
 
-process_files([], _Dir) ->
-  stop();
-process_files([File | Rest], Dir) ->
+process_files([], _Dir, Processed) ->
+  insert_schema_migrations(Processed);
+%%   stop();
+process_files([File | Rest], Dir, Processed) ->
+  [NumStr | _] = string:tokens(File, "_"),
   erlang:display(File),
   case file:consult("db/migrate/" ++ File) of
     {ok, Tokens} ->
       Term = proplists:get_value(Dir, Tokens),
       case gen_server:call(?MODULE, Term) of
         {ok, _Result} ->
-%%           Pid ! {insert_schema_migration, File},
-          process_files(Rest, Dir);
+          process_files(Rest, Dir, [NumStr | Processed]);
         {error, Error} ->
           io:format("Error with ~s: ~p~n", [File, Error])
       end;
@@ -95,7 +100,7 @@ generate_drop_statement(TableName) ->
   "DROP TABLE " ++ TableName.
 
 generate_create_statement(TableName, Contents) ->
-  "CREATE TABLE " ++ TableName ++ "(\n     id integer NOT NULL \n" ++  create_table_columns("", Contents) ++ ")".
+  "CREATE TABLE " ++ TableName ++ "(\n     id serial NOT NULL \n" ++  create_table_columns("", Contents) ++ ")".
 
 create_table_columns(Stmt, []) ->
   Stmt;
@@ -123,7 +128,9 @@ ensure_migration_table() ->
   end.
 
 
-generate_schema_migration_statement(FileName) ->
-  [NumStr | _] = string:tokens(FileName, "_"),
-  io_lib:format("insert into schema_migrations (version) values ('~s')", [NumStr]).
+insert_schema_migrations([]) ->
+  ok;
+insert_schema_migrations([Version | Versions]) ->
+  gen_server:call(?MODULE, {insert_schema_migration, Version}),
+  insert_schema_migrations(Versions).
 
