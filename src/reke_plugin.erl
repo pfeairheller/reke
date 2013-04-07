@@ -26,11 +26,11 @@
 'reke-db:rollback'(Config, _AppFile) ->
   OrigPath = code:get_path(),
   true = code:add_path(rebar_utils:ebin_dir()),
-
+  Step = rebar_config:get_global(Config, step, "1"),
   Result = case rebar_utils:processing_base_dir(Config) of
     true ->
       reke:start(),
-      reke:execute(["db", "rollback"]),
+      reke:execute(["db", "rollback", "STEP="++Step]),
       ok;
     false -> ok
   end,
