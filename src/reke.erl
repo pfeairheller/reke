@@ -9,7 +9,6 @@ start() ->
 
 execute(Args) ->
   [ModuleName | [MethodName | RestArgs]] = Args,
-  Module = list_to_atom("reke_" ++ ModuleName),
-  Method = list_to_atom(MethodName),
+  Module = list_to_atom("reke_" ++ ModuleName ++ "_" ++ MethodName),
   reke:start(),
-  apply(Module, Method, [RestArgs]).
+  apply(Module, execute, [RestArgs]).
