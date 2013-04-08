@@ -45,6 +45,7 @@
   true = code:add_path(rebar_utils:ebin_dir()),
   ModelName = rebar_config:get_global(Config, model_name, undefined),
   Columns   = rebar_config:get_global(Config, column_spec, undefined),
+  io:format("~p~n", [rebar_utils:processing_base_dir(Config)]),
 
   Result = case rebar_utils:processing_base_dir(Config) of
     true ->
@@ -60,7 +61,7 @@
 'reke-gen:migration'(Config, _AppFile) ->
   OrigPath = code:get_path(),
   true = code:add_path(rebar_utils:ebin_dir()),
-  io:format("~p~n", [rebar_utils:processing_base_dir(Config)]),
+
   Result = case rebar_utils:processing_base_dir(Config) of
     true ->
       reke:start(),
