@@ -60,7 +60,7 @@
 'reke-gen:migration'(Config, _AppFile) ->
   OrigPath = code:get_path(),
   true = code:add_path(rebar_utils:ebin_dir()),
-
+  io:format("~p~n", [rebar_utils:processing_base_dir(Config)]),
   Result = case rebar_utils:processing_base_dir(Config) of
     true ->
       reke:start(),
